@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sarkar — Funnel Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #F6F5F1;
+    --bg-panel: #FFFFFF;
+    --bg-tile: #FFFFFF;
+    --border: #E1DED4;
+    --navy: #1F3864;
+    --navy-soft: #E9EDF4;
+    --accent: #B5651D;
+    --text: #26241E;
+    --text-dim: #6B6656;
+    --text-faint: #9A9686;
+    --good: #3F7A44;
+    --bad: #B5453A;
+    --row-alt: #F5F6F8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 36px 32px 80px;
+  }
+  .wrap { max-width: 1220px; margin: 0 auto; }
+  .masthead { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; flex-wrap: wrap; gap: 16px; }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 30px;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--navy);
+  }
+  .subtitle { color: var(--text-dim); font-size: 13.5px; margin-top: 6px; }
+  .meta { color: var(--text-faint); font-size: 11.5px; text-align: right; }
+
+  .filterbar {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin: 24px 0 24px;
+    flex-wrap: wrap;
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-group label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); font-weight: 600; }
+  input[type="date"], select {
+    background: #FBFAF7;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 7px 10px;
+    border-radius: 6px;
+  }
+  select { cursor: pointer; min-width: 170px; }
+
+  .grid-main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; align-items: stretch; }
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .panel h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 16px;
+    margin: 0 0 4px;
+    color: var(--navy);
+  }
+  .panel .panel-sub { font-size: 11.5px; color: var(--text-faint); margin-bottom: 14px; }
+
+  .panel-chart { display: flex; flex-direction: column; height: 100%; }
+  .panel-chart .chart-wrap { flex: 1; position: relative; min-height: 240px; }
+  .panel-chart canvas { max-height: none !important; }
+
+  .funnel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 16px; }
+  .funnel-chart-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .funnel-chart-card h3 { font-size: 12.5px; font-weight: 600; margin: 0 0 10px; color: var(--navy); }
+  .funnel-chart-card canvas { max-height: 150px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+  .toggle-btn {
+    background: var(--navy-soft);
+    border: 1px solid var(--border);
+    color: var(--navy);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
+  .toggle-btn:hover { background: #DCE3EF; }
+
+  .counts-col { display: none; }
+  body.show-counts .counts-col { display: table-cell; }
+  thead th {
+    background: var(--navy);
+    color: #fff;
+    text-align: right;
+    font-weight: 600;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 9px 10px;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tbody tr:last-child td { border-bottom: none; }
+  .roas-good { color: var(--good); font-weight: 600; }
+  .roas-bad { color: var(--bad); font-weight: 600; }
+
+  canvas { max-height: 260px; }
+
+  footer { margin-top: 32px; color: var(--text-faint); font-size: 11px; line-height: 1.6; }
+
+  @media (max-width: 980px) {
+    .grid-main { grid-template-columns: 1fr; }
+    .funnel-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <h1>Sarkar — Funnel Dashboard</h1>
+      <div class="subtitle" id="subtitle"></div>
+    </div>
+    <div class="meta" id="generated-meta"></div>
+  </div>
+
+  <div class="filterbar">
+    <div class="filter-group">
+      <label>Account</label>
+      <select id="accountSelect"></select>
+    </div>
+    <div class="filter-group">
+      <label>From</label>
+      <input type="date" id="startDate">
+    </div>
+    <div class="filter-group">
+      <label>To</label>
+      <input type="date" id="endDate">
+    </div>
+  </div>
+
+  <div class="grid-main">
+    <div class="panel panel-chart">
+      <h2>Spend &amp; ROAS — Daily</h2>
+      <div class="panel-sub">Bars: spend (₹) &middot; Line: ROAS</div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="panel panel-chart">
+      <h2>Revenue Trend</h2>
+      <div class="panel-sub">Revenue = Spend &times; ROAS</div>
+      <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:16px;">
+    <h2>Daily Breakdown</h2>
+    <button id="toggleCounts" class="toggle-btn">Show raw counts (Clicks, Content Views, ATC, Checkouts, Payment Info)</button>
+    <div style="overflow-x:auto;">
+      <table id="dailyTable">
+        <thead>
+          <tr>
+            <th>Date</th><th>Spend</th><th>Impr.</th><th>CPM</th>
+            <th class="counts-col">Clicks</th>
+            <th>CTR</th>
+            <th>LPV / Click %</th>
+            <th class="counts-col">Content Views</th>
+            <th class="counts-col">ATC</th>
+            <th>ATC / CV %</th>
+            <th class="counts-col">Checkouts</th>
+            <th>Checkout / ATC %</th>
+            <th class="counts-col">Payment Info</th>
+            <th>Payment / Checkout %</th>
+            <th>Purchases</th>
+            <th>Purchase / Payment %</th>
+            <th>Revenue</th><th>ROAS</th><th>CAC</th><th>AOV</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Funnel Conversion Rates — Daily Trend</h2>
+    <div class="panel-sub">Same seven ratios as your original sheet, tracked day by day</div>
+    <div class="funnel-grid">
+      <div class="funnel-chart-card"><h3>CTR % (Clicks / Impressions)</h3><canvas id="chartCTR"></canvas></div>
+      <div class="funnel-chart-card"><h3>LPV / Click %</h3><canvas id="chartLPV"></canvas></div>
+      <div class="funnel-chart-card"><h3>ATC / Content View %</h3><canvas id="chartATC"></canvas></div>
+      <div class="funnel-chart-card"><h3>Checkout / ATC %</h3><canvas id="chartCheckout"></canvas></div>
+      <div class="funnel-chart-card"><h3>Payment Info / Checkout %</h3><canvas id="chartPayment"></canvas></div>
+      <div class="funnel-chart-card"><h3>Purchase / Payment Info %</h3><canvas id="chartPurchase"></canvas></div>
+      <div class="funnel-chart-card"><h3>CAC (INR) — Cost per Purchase</h3><canvas id="chartCAC"></canvas></div>
+    </div>
+  </div>
+
+  <footer id="footer-note"></footer>
+
+</div>
+
+<script>
+const DATA = {"generated_at": "2026-08-12T17:20:13", "date_range": ["2026-08-03", "2026-08-12"], "accounts": {"act_1019012934344102": {"label": "Sarkar 2", "daily": [{"ad_account_id": "act_1019012934344102", "date": "2026-08-05", "spend": 1392.38, "impressions": 14100, "reach": 14033, "clicks": 516, "landing_page_views": 504, "content_views": 556, "adds_to_cart": 89, "checkouts_initiated": 21, "payment_info_added": 13, "purchases": 4, "revenue": 4588.72}, {"ad_account_id": "act_1019012934344102", "date": "2026-08-06", "spend": 53715.66, "impressions": 491965, "reach": 334708, "clicks": 20721, "landing_page_views": 12800, "content_views": 11215, "adds_to_cart": 3230, "checkouts_initiated": 561, "payment_info_added": 355, "purchases": 142, "revenue": 229446.82400000002}, {"ad_account_id": "act_1019012934344102", "date": "2026-08-07", "spend": 31803.21, "impressions": 265782, "reach": 198416, "clicks": 8264, "landing_page_views": 4931, "content_views": 6364, "adds_to_cart": 1457, "checkouts_initiated": 317, "payment_info_added": 250, "purchases": 135, "revenue": 217547.06600000002}, {"ad_account_id": "act_1019012934344102", "date": "2026-08-08", "spend": 28906.17, "impressions": 212319, "reach": 157305, "clicks": 5324, "landing_page_views": 3861, "content_views": 5539, "adds_to_cart": 901, "checkouts_initiated": 169, "payment_info_added": 143, "purchases": 75, "revenue": 121692.18200000002}, {"ad_account_id": "act_1019012934344102", "date": "2026-08-09", "spend": 17855.51, "impressions": 136440, "reach": 100246, "clicks": 2906, "landing_page_views": 1918, "content_views": 3155, "adds_to_cart": 421, "checkouts_initiated": 101, "payment_info_added": 86, "purchases": 44, "revenue": 67466.648}, {"ad_account_id": "act_1019012934344102", "date": "2026-08-10", "spend": 15571.68, "impressions": 137896, "reach": 113436, "clicks": 3287, "landing_page_views": 2374, "content_views": 3252, "adds_to_cart": 344, "checkouts_initiated": 76, "payment_info_added": 63, "purchases": 26, "revenue": 53792.65600000001}, {"ad_account_id": "act_1019012934344102", "date": "2026-08-11", "spend": 18571.25, "impressions": 154693, "reach": 121373, "clicks": 3183, "landing_page_views": 2080, "content_views": 3114, "adds_to_cart": 306, "checkouts_initiated": 60, "payment_info_added": 44, "purchases": 19, "revenue": 34096.420000000006}, {"ad_account_id": "act_1019012934344102", "date": "2026-08-12", "spend": 33302.65, "impressions": 254539, "reach": 205421, "clicks": 7921, "landing_page_views": 5597, "content_views": 9266, "adds_to_cart": 1339, "checkouts_initiated": 184, "payment_info_added": 144, "purchases": 71, "revenue": 155937.02200000003}], "totals": {"spend": 201118.50999999998, "impressions": 1667734, "reach": 1244938, "clicks": 52122, "landing_page_views": 34065, "content_views": 42461, "adds_to_cart": 8087, "checkouts_initiated": 1489, "payment_info_added": 1098, "purchases": 516, "revenue": 884567.5380000001, "ctr": 0.031253, "lpv_per_click": 0.653563, "atc_per_content_view": 0.190457, "checkout_per_atc": 0.184123, "payment_per_checkout": 0.737408, "purchase_per_payment": 0.469945, "cac": 389.764554, "roas": 4.39824, "aov": 1714.278174}}, "act_1524584292631728": {"label": "act_1524584292631728", "daily": [{"ad_account_id": "act_1524584292631728", "date": "2026-08-03", "spend": 16091.7, "impressions": 163545, "reach": 110992, "clicks": 11356, "landing_page_views": 7528, "content_views": 6337, "adds_to_cart": 2069, "checkouts_initiated": 379, "payment_info_added": 258, "purchases": 89, "revenue": 127174.70200000002}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-04", "spend": 62416.18, "impressions": 787448, "reach": 468162, "clicks": 44959, "landing_page_views": 27736, "content_views": 20531, "adds_to_cart": 6245, "checkouts_initiated": 1179, "payment_info_added": 763, "purchases": 272, "revenue": 398651.61000000004}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-05", "spend": 67410.6, "impressions": 867415, "reach": 540442, "clicks": 42949, "landing_page_views": 26666, "content_views": 19530, "adds_to_cart": 7331, "checkouts_initiated": 1535, "payment_info_added": 1052, "purchases": 392, "revenue": 552441.544}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-06", "spend": 75162.51, "impressions": 1172490, "reach": 751326, "clicks": 45761, "landing_page_views": 28201, "content_views": 13524, "adds_to_cart": 7485, "checkouts_initiated": 1274, "payment_info_added": 863, "purchases": 302, "revenue": 439893.83800000005}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-07", "spend": 54777.72, "impressions": 741979, "reach": 489189, "clicks": 21948, "landing_page_views": 13184, "content_views": 8520, "adds_to_cart": 3417, "checkouts_initiated": 594, "payment_info_added": 425, "purchases": 183, "revenue": 306860.031}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-08", "spend": 53869.44, "impressions": 655403, "reach": 467022, "clicks": 14152, "landing_page_views": 9182, "content_views": 5542, "adds_to_cart": 2395, "checkouts_initiated": 451, "payment_info_added": 344, "purchases": 118, "revenue": 178303.42400000003}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-09", "spend": 38985.88, "impressions": 474149, "reach": 329505, "clicks": 8625, "landing_page_views": 5693, "content_views": 3243, "adds_to_cart": 1742, "checkouts_initiated": 312, "payment_info_added": 234, "purchases": 90, "revenue": 147263.14400000003}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-10", "spend": 21401.67, "impressions": 200714, "reach": 130906, "clicks": 4394, "landing_page_views": 2950, "content_views": 1789, "adds_to_cart": 1051, "checkouts_initiated": 174, "payment_info_added": 131, "purchases": 40, "revenue": 81918.88560000001}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-11", "spend": 56713.5, "impressions": 504588, "reach": 298397, "clicks": 13082, "landing_page_views": 9705, "content_views": 4770, "adds_to_cart": 2443, "checkouts_initiated": 381, "payment_info_added": 294, "purchases": 143, "revenue": 293998.2162}, {"ad_account_id": "act_1524584292631728", "date": "2026-08-12", "spend": 32815.47, "impressions": 282260, "reach": 194477, "clicks": 7761, "landing_page_views": 5007, "content_views": 2228, "adds_to_cart": 1272, "checkouts_initiated": 187, "payment_info_added": 148, "purchases": 69, "revenue": 135393.64400000003}], "totals": {"spend": 479644.6699999999, "impressions": 5849991, "reach": 3780418, "clicks": 214987, "landing_page_views": 135852, "content_views": 86014, "adds_to_cart": 35450, "checkouts_initiated": 6466, "payment_info_added": 4512, "purchases": 1698, "revenue": 2661899.0388, "ctr": 0.03675, "lpv_per_click": 0.631908, "atc_per_content_view": 0.412142, "checkout_per_atc": 0.182398, "payment_per_checkout": 0.697804, "purchase_per_payment": 0.37633, "cac": 282.476249, "roas": 5.549731, "aov": 1567.667278}}}, "blended": {"daily": [{"spend": 16091.7, "impressions": 163545, "reach": 110992, "clicks": 11356, "landing_page_views": 7528, "content_views": 6337, "adds_to_cart": 2069, "checkouts_initiated": 379, "payment_info_added": 258, "purchases": 89, "revenue": 127174.70200000002, "date": "2026-08-03"}, {"spend": 62416.18, "impressions": 787448, "reach": 468162, "clicks": 44959, "landing_page_views": 27736, "content_views": 20531, "adds_to_cart": 6245, "checkouts_initiated": 1179, "payment_info_added": 763, "purchases": 272, "revenue": 398651.61000000004, "date": "2026-08-04"}, {"spend": 68802.98000000001, "impressions": 881515, "reach": 554475, "clicks": 43465, "landing_page_views": 27170, "content_views": 20086, "adds_to_cart": 7420, "checkouts_initiated": 1556, "payment_info_added": 1065, "purchases": 396, "revenue": 557030.264, "date": "2026-08-05"}, {"spend": 128878.17, "impressions": 1664455, "reach": 1086034, "clicks": 66482, "landing_page_views": 41001, "content_views": 24739, "adds_to_cart": 10715, "checkouts_initiated": 1835, "payment_info_added": 1218, "purchases": 444, "revenue": 669340.662, "date": "2026-08-06"}, {"spend": 86580.93, "impressions": 1007761, "reach": 687605, "clicks": 30212, "landing_page_views": 18115, "content_views": 14884, "adds_to_cart": 4874, "checkouts_initiated": 911, "payment_info_added": 675, "purchases": 318, "revenue": 524407.0970000001, "date": "2026-08-07"}, {"spend": 82775.61, "impressions": 867722, "reach": 624327, "clicks": 19476, "landing_page_views": 13043, "content_views": 11081, "adds_to_cart": 3296, "checkouts_initiated": 620, "payment_info_added": 487, "purchases": 193, "revenue": 299995.606, "date": "2026-08-08"}, {"spend": 56841.39, "impressions": 610589, "reach": 429751, "clicks": 11531, "landing_page_views": 7611, "content_views": 6398, "adds_to_cart": 2163, "checkouts_initiated": 413, "payment_info_added": 320, "purchases": 134, "revenue": 214729.79200000002, "date": "2026-08-09"}, {"spend": 36973.35, "impressions": 338610, "reach": 244342, "clicks": 7681, "landing_page_views": 5324, "content_views": 5041, "adds_to_cart": 1395, "checkouts_initiated": 250, "payment_info_added": 194, "purchases": 66, "revenue": 135711.54160000003, "date": "2026-08-10"}, {"spend": 75284.75, "impressions": 659281, "reach": 419770, "clicks": 16265, "landing_page_views": 11785, "content_views": 7884, "adds_to_cart": 2749, "checkouts_initiated": 441, "payment_info_added": 338, "purchases": 162, "revenue": 328094.6362, "date": "2026-08-11"}, {"spend": 66118.12, "impressions": 536799, "reach": 399898, "clicks": 15682, "landing_page_views": 10604, "content_views": 11494, "adds_to_cart": 2611, "checkouts_initiated": 371, "payment_info_added": 292, "purchases": 140, "revenue": 291330.6660000001, "date": "2026-08-12"}], "totals": {"spend": 680763.18, "impressions": 7517725, "reach": 5025356, "clicks": 267109, "landing_page_views": 169917, "content_views": 128475, "adds_to_cart": 43537, "checkouts_initiated": 7955, "payment_info_added": 5610, "purchases": 2214, "revenue": 3546466.5768, "ctr": 0.035531, "lpv_per_click": 0.636134, "atc_per_content_view": 0.338875, "checkout_per_atc": 0.182718, "payment_per_checkout": 0.705217, "purchase_per_payment": 0.394652, "cac": 307.481111, "roas": 5.209545, "aov": 1601.836756}}};
+
+const fmtINR = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const fmtNum = n => Math.round(n).toLocaleString('en-IN');
+const fmtPct = n => (n * 100).toFixed(1) + '%';
+const fmtX = n => n.toFixed(2) + 'x';
+
+let trendChart, revenueChart;
+const miniCharts = {};
+
+function baseDataset() {
+  const sel = document.getElementById('accountSelect').value;
+  return sel === 'blended' ? DATA.blended : DATA.accounts[sel];
+}
+
+function filteredDaily() {
+  const start = document.getElementById('startDate').value;
+  const end = document.getElementById('endDate').value;
+  const daily = baseDataset().daily;
+  return daily.filter(d => (!start || d.date >= start) && (!end || d.date <= end));
+}
+
+function computeTotals(rows) {
+  const t = {
+    spend: 0, impressions: 0, reach: 0, clicks: 0, landing_page_views: 0,
+    content_views: 0, adds_to_cart: 0, checkouts_initiated: 0,
+    payment_info_added: 0, purchases: 0, revenue: 0,
+  };
+  rows.forEach(r => {
+    Object.keys(t).forEach(k => t[k] += r[k]);
+  });
+  const safeDiv = (a, b) => b ? a / b : 0;
+  t.ctr = safeDiv(t.clicks, t.impressions);
+  t.atc_per_content_view = safeDiv(t.adds_to_cart, t.content_views);
+  t.checkout_per_atc = safeDiv(t.checkouts_initiated, t.adds_to_cart);
+  t.payment_per_checkout = safeDiv(t.payment_info_added, t.checkouts_initiated);
+  t.purchase_per_payment = safeDiv(t.purchases, t.payment_info_added);
+  t.cac = safeDiv(t.spend, t.purchases);
+  t.roas = safeDiv(t.revenue, t.spend);
+  t.aov = safeDiv(t.revenue, t.purchases);
+  return t;
+}
+
+function renderMeta() {
+  document.getElementById('generated-meta').textContent = 'Updated ' + DATA.generated_at.replace('T', ' ');
+  document.getElementById('footer-note').innerHTML =
+    'Generated ' + DATA.generated_at.replace('T', ' ') + ' from local pipeline data. ' +
+    'Formulas: CTR = Clicks / Impressions &middot; ATC / Content View = Adds to Cart / Content Views &middot; ' +
+    'Checkout / ATC = Checkouts Initiated / Adds to Cart &middot; Payment Info / Checkout = Payment Info Added / Checkouts Initiated &middot; ' +
+    'Purchase / Payment Info = Purchases / Payment Info Added &middot; CAC = Spend / Purchases &middot; ROAS = Revenue / Spend &middot; AOV = Revenue / Purchases. ' +
+    'Revenue shown throughout excludes 18% GST (Revenue &times; 82%), so ROAS and AOV are based on ex-GST revenue. ' +
+    'Totals are computed over the selected range (total/total), not an average of daily percentages.' +
+    (DATA.preview_note ? ' <strong>' + DATA.preview_note + '</strong>' : '');
+}
+
+function renderAccountSelect() {
+  const sel = document.getElementById('accountSelect');
+  sel.innerHTML = '';
+  const blendedOpt = document.createElement('option');
+  blendedOpt.value = 'blended';
+  blendedOpt.textContent = 'All accounts (Blended)';
+  sel.appendChild(blendedOpt);
+  Object.entries(DATA.accounts).forEach(([id, acc]) => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = acc.label;
+    sel.appendChild(opt);
+  });
+}
+
+function initDateRange() {
+  const all = DATA.blended.daily;
+  document.getElementById('startDate').value = all[0].date;
+  document.getElementById('endDate').value = all[all.length - 1].date;
+  document.getElementById('startDate').min = all[0].date;
+  document.getElementById('endDate').max = all[all.length - 1].date;
+}
+
+
+const NAVY = '#1F3864';
+const ACCENT = '#B5651D';
+const GOOD = '#3F7A44';
+
+function destroyIfExists(chart) { if (chart) chart.destroy(); }
+
+function renderTrendChart(rows) {
+  const labels = rows.map(d => d.date.slice(5));
+  const spend = rows.map(d => d.spend);
+  const roas = rows.map(d => d.spend ? d.revenue / d.spend : 0);
+
+  destroyIfExists(trendChart);
+  trendChart = new Chart(document.getElementById('trendChart').getContext('2d'), {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: 'Spend (₹)', data: spend, backgroundColor: 'rgba(31, 56, 100, 0.55)', borderRadius: 4, yAxisID: 'y' },
+        { type: 'line', label: 'ROAS', data: roas, borderColor: ACCENT, backgroundColor: ACCENT, tension: 0.3, yAxisID: 'y1', pointRadius: 3 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: '#6B6656', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#9A9686', font: { size: 10 } }, grid: { display: false } },
+        y: { position: 'left', ticks: { color: '#9A9686', font: { size: 10 } }, grid: { color: '#EDEBE3' } },
+        y1: { position: 'right', ticks: { color: '#9A9686', font: { size: 10 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderRevenueChart(rows) {
+  const labels = rows.map(d => d.date.slice(5));
+  const revenue = rows.map(d => d.revenue);
+
+  destroyIfExists(revenueChart);
+  revenueChart = new Chart(document.getElementById('revenueChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Revenue (₹)', data: revenue, borderColor: GOOD,
+        backgroundColor: 'rgba(63, 122, 68, 0.12)', fill: true, tension: 0.3, pointRadius: 3,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#9A9686', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#9A9686', font: { size: 10 } }, grid: { color: '#EDEBE3' } },
+      },
+    },
+  });
+}
+
+function miniLineConfig(labels, data, color, isPercent) {
+  return {
+    type: 'line',
+    data: { labels, datasets: [{ data, borderColor: color, backgroundColor: color, tension: 0.3, pointRadius: 2, borderWidth: 2 }] },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#9A9686', font: { size: 9 } }, grid: { display: false } },
+        y: {
+          ticks: {
+            color: '#9A9686', font: { size: 9 },
+            callback: v => isPercent ? (v * 100).toFixed(0) + '%' : v,
+          },
+          grid: { color: '#EDEBE3' },
+        },
+      },
+    },
+  };
+}
+
+function renderFunnelTrendCharts(rows) {
+  const labels = rows.map(d => d.date.slice(5));
+  const safeDiv = (a, b) => b ? a / b : 0;
+
+  const series = {
+    chartCTR: rows.map(d => safeDiv(d.clicks, d.impressions)),
+    chartLPV: rows.map(d => safeDiv(d.landing_page_views, d.clicks)),
+    chartATC: rows.map(d => safeDiv(d.adds_to_cart, d.content_views)),
+    chartCheckout: rows.map(d => safeDiv(d.checkouts_initiated, d.adds_to_cart)),
+    chartPayment: rows.map(d => safeDiv(d.payment_info_added, d.checkouts_initiated)),
+    chartPurchase: rows.map(d => safeDiv(d.purchases, d.payment_info_added)),
+    chartCAC: rows.map(d => safeDiv(d.spend, d.purchases)),
+  };
+
+  Object.entries(series).forEach(([id, data]) => {
+    destroyIfExists(miniCharts[id]);
+    const isPercent = id !== 'chartCAC';
+    miniCharts[id] = new Chart(
+      document.getElementById(id).getContext('2d'),
+      miniLineConfig(labels, data, NAVY, isPercent)
+    );
+  });
+}
+
+function renderTable(rows) {
+  const tbody = document.querySelector('#dailyTable tbody');
+  const safeDiv = (a, b) => b ? a / b : 0;
+  tbody.innerHTML = rows.map(d => {
+    const roas = safeDiv(d.revenue, d.spend);
+    const cac = safeDiv(d.spend, d.purchases);
+    const aov = safeDiv(d.revenue, d.purchases);
+    const ctr = safeDiv(d.clicks, d.impressions);
+    const cpm = safeDiv(d.spend, d.impressions) * 1000;
+    const lpvPerClick = safeDiv(d.landing_page_views, d.clicks);
+    const atcPerCv = safeDiv(d.adds_to_cart, d.content_views);
+    const checkoutPerAtc = safeDiv(d.checkouts_initiated, d.adds_to_cart);
+    const paymentPerCheckout = safeDiv(d.payment_info_added, d.checkouts_initiated);
+    const purchasePerPayment = safeDiv(d.purchases, d.payment_info_added);
+    const roasClass = roas >= 4 ? 'roas-good' : (roas < 2 ? 'roas-bad' : '');
+    return `<tr>
+      <td>${d.date}</td>
+      <td>${fmtINR(d.spend)}</td>
+      <td>${fmtNum(d.impressions)}</td>
+      <td>${fmtINR(cpm)}</td>
+      <td class="counts-col">${fmtNum(d.clicks)}</td>
+      <td>${fmtPct(ctr)}</td>
+      <td>${fmtPct(lpvPerClick)}</td>
+      <td class="counts-col">${fmtNum(d.content_views)}</td>
+      <td class="counts-col">${fmtNum(d.adds_to_cart)}</td>
+      <td>${fmtPct(atcPerCv)}</td>
+      <td class="counts-col">${fmtNum(d.checkouts_initiated)}</td>
+      <td>${fmtPct(checkoutPerAtc)}</td>
+      <td class="counts-col">${fmtNum(d.payment_info_added)}</td>
+      <td>${fmtPct(paymentPerCheckout)}</td>
+      <td>${fmtNum(d.purchases)}</td>
+      <td>${fmtPct(purchasePerPayment)}</td>
+      <td>${fmtINR(d.revenue)}</td>
+      <td class="${roasClass}">${fmtX(roas)}</td>
+      <td>${fmtINR(cac)}</td>
+      <td>${fmtINR(aov)}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('toggleCounts').addEventListener('click', () => {
+  document.body.classList.toggle('show-counts');
+  const btn = document.getElementById('toggleCounts');
+  btn.textContent = document.body.classList.contains('show-counts')
+    ? 'Hide raw counts'
+    : 'Show raw counts (Clicks, Content Views, ATC, Checkouts, Payment Info)';
+});
+
+function renderAll() {
+  const rows = filteredDaily();
+  const start = rows.length ? rows[0].date : DATA.date_range[0];
+  const end = rows.length ? rows[rows.length - 1].date : DATA.date_range[1];
+  document.getElementById('subtitle').textContent =
+    `Daily paid social funnel performance — ${start} to ${end}`;
+
+  renderTrendChart(rows);
+  renderRevenueChart(rows);
+  renderFunnelTrendCharts(rows);
+  renderTable(rows);
+}
+
+document.getElementById('accountSelect').addEventListener('change', renderAll);
+document.getElementById('startDate').addEventListener('change', renderAll);
+document.getElementById('endDate').addEventListener('change', renderAll);
+
+renderMeta();
+renderAccountSelect();
+initDateRange();
+renderAll();
+</script>
+</body>
+</html>

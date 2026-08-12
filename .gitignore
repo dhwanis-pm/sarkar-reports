@@ -1,0 +1,8 @@
+# Never push these — they contain credentials or raw client ad data
+.env
+*.duckdb
+*.duckdb.wal
+logs/
+
+# macOS junk
+.DS_Store
